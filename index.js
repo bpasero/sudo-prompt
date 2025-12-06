@@ -210,7 +210,7 @@ function LinuxBinary(instance, end) {
         if (error) {
           if (error.code === 'ENOTDIR') return test();
           if (error.code === 'ENOENT') return test();
-          end(error);
+          end(error, path);
         } else {
           end(undefined, path);
         }
@@ -237,8 +237,8 @@ function Mac(instance, callback) {
       function end(error, stdout, stderr) {
         Remove(Node.path.dirname(instance.path),
           function(errorRemove) {
-            if (error) return callback(error);
-            if (errorRemove) return callback(errorRemove);
+            if (error) return callback(error, stdout, stderr);
+            if (errorRemove) return callback(errorRemove, stdout, stderr);
             callback(undefined, stdout, stderr);
           }
         );
@@ -248,13 +248,13 @@ function Mac(instance, callback) {
           if (error) return end(error, stdout, stderr);
           MacIcon(instance,
             function(error) {
-              if (error) return end(error);
+              if (error) return end(error, stdout, stderr);
               MacPropertyList(instance,
                 function(error, stdout, stderr) {
                   if (error) return end(error, stdout, stderr);
                   MacCommand(instance,
                     function(error) {
-                      if (error) return end(error);
+                      if (error) return end(error, stdout, stderr);
                       MacOpen(instance,
                         function(error, stdout, stderr) {
                           if (error) return end(error, stdout, stderr);
@@ -388,7 +388,9 @@ function MacResult(instance, end) {
                   end(undefined, stdout, stderr);
                 } else {
                   error = new Error(
-                    'Command failed: ' + instance.command + '\n' + stderr
+                    'Command failed: ' + instance.command + '\n' +
+                    (stdout ? stdout : '') +
+                    (stderr ? stderr : '')
                   );
                   error.code = code;
                   end(error, stdout, stderr);
@@ -476,8 +478,8 @@ function Windows(instance, callback) {
           function end(error, stdout, stderr) {
             Remove(instance.path,
               function(errorRemove) {
-                if (error) return callback(error);
-                if (errorRemove) return callback(errorRemove);
+                if (error) return callback(error, stdout, stderr);
+                if (errorRemove) return callback(errorRemove, stdout, stderr);
                 callback(undefined, stdout, stderr);
               }
             );
@@ -493,7 +495,7 @@ function Windows(instance, callback) {
                       if (error) return end(error, stdout, stderr);
                       WindowsWaitForStatus(instance,
                         function(error) {
-                          if (error) return end(error);
+                          if (error) return end(error, stdout, stderr);
                           WindowsResult(instance, end);
                         }
                       );
@@ -532,7 +534,7 @@ function WindowsElevate(instance, end) {
       // permission errors. This seems reasonable, given that we already run the
       // user's command in a subshell.
       if (error) return end(new Error(PERMISSION_DENIED), stdout, stderr);
-      end();
+      end(undefined, stdout, stderr);
     }
   );
   child.stdin.end(); // Otherwise PowerShell waits indefinitely on Windows 7.
@@ -544,16 +546,18 @@ function WindowsResult(instance, end) {
       if (error) return end(error);
       Node.fs.readFile(instance.pathStdout, 'utf-8',
         function(error, stdout) {
-          if (error) return end(error);
+          if (error) return end(error, stdout);
           Node.fs.readFile(instance.pathStderr, 'utf-8',
             function(error, stderr) {
-              if (error) return end(error);
+              if (error) return end(error, stdout, stderr);
               code = parseInt(code.trim(), 10);
               if (code === 0) {
                 end(undefined, stdout, stderr);
               } else {
                 error = new Error(
-                  'Command failed: ' + instance.command + '\r\n' + stderr
+                  'Command failed: ' + instance.command + '\r\n' +
+                  (stdout ? stdout : '') +
+                  (stderr ? stderr : '')
                 );
                 error.code = code;
                 end(error, stdout, stderr);
