@@ -21,6 +21,14 @@ function EscapeDoubleQuotes(string) {
   return string.replace(/"/g, '\\"');
 }
 
+function isObject(arg) {
+  return arg !== null && typeof arg === 'object';
+}
+
+function isFunction(arg) {
+  return typeof arg === 'function';
+}
+
 function Exec() {
   if (arguments.length < 1 || arguments.length > 3) {
     throw new Error('Wrong number of arguments.');
@@ -32,20 +40,20 @@ function Exec() {
     throw new Error('Command should be a string.');
   }
   if (arguments.length === 2) {
-    if (Node.util.isObject(arguments[1])) {
+    if (isObject(arguments[1])) {
       options = arguments[1];
-    } else if (Node.util.isFunction(arguments[1])) {
+    } else if (isFunction(arguments[1])) {
       end = arguments[1];
     } else {
       throw new Error('Expected options or callback.');
     }
   } else if (arguments.length === 3) {
-    if (Node.util.isObject(arguments[1])) {
+    if (isObject(arguments[1])) {
       options = arguments[1];
     } else {
       throw new Error('Expected options to be an object.');
     }
-    if (Node.util.isFunction(arguments[2])) {
+    if (isFunction(arguments[2])) {
       end = arguments[2];
     } else {
       throw new Error('Expected callback to be a function.');
